@@ -9,7 +9,7 @@ const path = require("path");
 
 const functions = require("firebase-functions");
 const admin = require("firebase-admin");
-var serviceAccount = require("./creds.json");
+// var serviceAccount = require("./creds.json");
  
 dotenv.config();
 
