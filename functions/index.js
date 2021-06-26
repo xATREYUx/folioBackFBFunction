@@ -3,14 +3,9 @@ const dotenv = require("dotenv");
 const cors = require("cors");
 const cookieParser = require("cookie-parser");
 
-const bodyParser = require("body-parser");
-const fs = require("fs");
-const path = require("path");
-
 const functions = require("firebase-functions");
 const admin = require("firebase-admin");
-// var serviceAccount = require("./creds.json");
- 
+
 dotenv.config();
 
 admin.initializeApp({
@@ -19,11 +14,10 @@ admin.initializeApp({
   storageBucket: "devport-express-backend.appspot.com",
 });
 
- // if (process.env.NODE_ENV == "development") {
-  process.env['FIRESTORE_EMULATOR_HOST'] = 'localhost:8080';
-  // }
+if (process.env.NODE_ENV == "development") {
+  process.env["FIRESTORE_EMULATOR_HOST"] = "localhost:8080";
+}
 
-  
 const app = express();
 const PORT = process.env.PORT || 5000;
 
