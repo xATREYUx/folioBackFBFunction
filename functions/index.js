@@ -14,16 +14,16 @@ admin.initializeApp({
   storageBucket: "devport-express-backend.appspot.com",
 });
 
-if (process.env.NODE_ENV == "development") {
-  process.env["FIRESTORE_EMULATOR_HOST"] = "localhost:8080";
-}
-
+// if (process.env.NODE_ENV == "development") {
+//   process.env["FIRESTORE_EMULATOR_HOST"] = "localhost:8080";
+// }
+// console.log("INITIALIZING NODE_ENV: ", NODE_ENV);
 const app = express();
 const PORT = process.env.PORT || 5000;
 
-app.listen(PORT, () => {
-  console.log(`Server started on port: ${PORT}`);
-});
+// app.listen(PORT, () => {
+//   console.log(`Server started on port: ${PORT}`);
+// });
 
 // app.use(express.json());
 // app.use(
@@ -39,7 +39,7 @@ app.use(cookieParser());
 
 app.use(
   cors({
-    origin: ["http://localhost:3000"],
+    origin: ["http://localhost:3000", "https://foliofront.web.app"],
     credentials: true,
   })
 );

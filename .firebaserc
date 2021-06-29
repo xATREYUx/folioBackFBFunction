@@ -1,5 +1,14 @@
 {
   "projects": {
     "default": "devport-express-backend"
+  },
+  "targets": {
+    "devport-express-backend": {
+      "hosting": {
+        "back": [
+          "folioback"
+        ]
+      }
+    }
   }
 }
