@@ -9,6 +9,11 @@ const db = admin.firestore();
 
 const axios = require("axios");
 
+const path = require("path");
+const os = require("os");
+const fs = require("fs");
+const Busboy = require("busboy");
+
 const uploader = require("../middleware/file-upload");
 const { v4: uuidv4 } = require("uuid");
 
@@ -16,115 +21,162 @@ const Posts = db.collection("posts");
 const Users = db.collection("users");
 
 // new
-router.post(
-  "/",
-  auth,
-  uploader.fields([
-    { name: "cardImage", maxCount: 1 },
-    { name: "postImageOne", maxCount: 1 },
-    { name: "postImageTwo", maxCount: 1 },
-  ]),
-  [
-    check("title").not().isEmpty(),
-    check("caption").not().isEmpty(),
-    check("content").not().isEmpty(),
-  ],
-  async (req, res, next) => {
-    // console.log("createPost req.body", req.body);
-    // console.log("createPost req.user", req.user);
-    // console.log("createPost req.files", req.files);
-    const { title, caption, content } = req.body;
-    const { uid } = req.user;
+router.post("/", auth, (req, res) => {
+  console.log("---postsrouter post---", req);
+  // if (req.method !== "POST") {
+  //   // Return a "method not allowed" error
+  //   return res.status(405).end();
+  // }
 
-    //add images to storage
+  const { uid } = req.user;
 
-    const blobWriterAsync = (value, key) =>
-      new Promise((resolve, reject) => {
-        let token = uuidv4();
-        const fileName = value[0].originalname + "-" + Date.now();
-        const blob = bucket.file(fileName);
+  const busboy = new Busboy({ headers: req.headers });
 
-        const blobWriter = blob.createWriteStream({
-          metadata: {
-            contentType: value[0].mimetype,
-            metadata: {
-              firebaseStorageDownloadTokens: token,
-            },
-          },
-        });
+  let fields = {};
+  let imageFileName = {};
+  let imagesToUpload = [];
+  let imageToAdd = {};
+  let imageUrls = [];
 
-        blobWriter.on("error", (err) => reject(err));
-        blobWriter.on("finish", () => {
-          console.log("---Assemblying Public URL & Metadata---", blob.name);
+  busboy.on("field", (fieldname, fieldvalue) => {
+    fields[fieldname] = fieldvalue;
+  });
 
-          const publicUrl = `https://firebasestorage.googleapis.com/v0/b/${
-            bucket.name
-          }/o/${encodeURI(blob.name)}?alt=media`;
-          resolve({ [key]: publicUrl });
-        });
-        blobWriter.end(value[0].buffer);
-      });
+  busboy.on("file", (fieldname, file, filename, encoding, mimetype) => {
+    if (mimetype !== "image/jpeg" && mimetype !== "image/png") {
+      return res.status(400).json({ error: "Wrong file type submitted!" });
+    }
 
-    const imagesWriteFunction = async () => {
-      var urls = [];
+    // Getting extension of any image
+    const newFileName =
+      path.parse(filename).name + "-" + Date.now() + path.parse(filename).ext;
+    // const imageExtension = filename.split(".")[filename.split(".").length - 1];
 
-      for (const [key, value] of Object.entries(req.files)) {
-        try {
-          const url = await blobWriterAsync(value, key);
-          urls.push(url);
-        } catch (err) {
-          console.log("blob write error");
-        }
-      }
-      return urls;
+    // Setting filename
+    // imageFileName = newFileName;
+
+    // Creating path
+    const filepath = path.join(os.tmpdir(), newFileName);
+    imageToAdd = {
+      imageFileName,
+      filepath,
+      mimetype,
     };
 
-    await imagesWriteFunction()
-      .then(async (urls) => {
-        console.log("imagesWriteFunction urls log", urls);
+    file.pipe(fs.createWriteStream(filepath));
+    //Add the image to the array
+    imagesToUpload.push(imageToAdd);
+  });
 
-        // console.log("iamgeUrls log", iamgeUrls);
-        //adds post to Post collection in firestore
-        var newPostData = {
-          title,
-          caption,
-          content,
-          creator: uid,
-          created: admin.firestore.Timestamp.now().seconds,
-          postURLs: urls,
-        };
+  busboy.on("finish", async () => {
+    let promises = [];
 
-        const newPostRes = await Posts.add(newPostData);
-        console.log("---newPostRes---", newPostRes.id);
-        newPostData.id = newPostRes.id;
-        //start 5 minute google function delete timer
-        const cleanId = newPostRes.id;
-        try {
-          axios
-            .post(
-              "https://us-central1-devport-express-backend.cloudfunctions.net/clean",
-              { cleanId }
-            )
-            // .then((data) => console.log("function data response", data))
-            .then((data) => console.log("function data response"))
+    imagesToUpload.forEach((imageToBeUploaded) => {
+      imageUrls.push(
+        `https://firebasestorage.googleapis.com/v0/b/${
+          bucket.name
+        }/o/${encodeURI(imageFileName)}?alt=media`
+      );
+      let token = uuidv4();
+      promises.push(
+        admin
+          .storage()
+          .bucket()
+          .upload(imageToBeUploaded.filepath, {
+            resumable: false,
+            metadata: {
+              metadata: {
+                contentType: imageToBeUploaded.mimetype,
+                firebaseStorageDownloadTokens: token,
+              },
+            },
+          })
+      );
+    });
 
-            .catch((err) => {
-              console.log("function log", err);
-            });
-        } catch (err) {
-          console.log("function log err", err);
-        }
+    try {
+      await Promise.all(promises);
+      return res.json({
+        message: `Images URL: ${imageUrls}`,
+      });
+    } catch (err) {
+      console.log(err);
+      res.status(500).json(err);
+    }
+  });
 
-        //adds post id to users posts array
-        const unionRes = await Users.doc(uid).update({
-          posts: admin.firestore.FieldValue.arrayUnion(newPostRes.id),
-        });
-        console.log("---Successfully added to user posts array---", unionRes);
-        res.status(200).send(newPostData);
-      })
-      .catch((err) => console.log("createPost error", err));
-  }
-);
+  busboy.end(req.rawBody);
+  // const tmpdir = os.tmpdir();
+  // const data = req.rawBody;
+  // const xmlData = data.toString();
+  // // console.log(`Field Data: `, xmlData);
+  // const fields = {};
+  // const uploads = {};
+  // // try {
+  // //   // This code will process each non-file field in the form.
+  // busboy.on("field", (fieldname, val) => {
+  //   // console.log(`Processed field ${filename}: ${val}.`);
+  //   console.log("Log field: ", fieldname);
+
+  //   // formData[fieldname] = val;
+  // });
+  // busboy.on("error", (error) => {
+  //   // console.log(`Processed field ${filename}: ${val}.`);
+  //   console.log("Log busboy error: ", error);
+  // });
+  // // file.on("finish", () => {
+  // //   console.log("Log field2: [" + fieldname + "] Finished");
+  // // });
+  // busboy.on("finish", function () {
+  //   console.log("Done parsing form!");
+  // });
+
+  //   const fileWrites = [];
+  //   // This code will process each file uploaded.
+  //   busboy.on("file", (fieldname, file, filename) => {
+  //     // Note: os.tmpdir() points to an in-memory file system on GCF
+  //     // Thus, any files in it must fit in the instance's memory.
+  //     console.log(`Processed file ${filename}`);
+  //     new Promise((resolve, reject) => {
+  //       const filepath = path.join(tmpdir, filename);
+  //       let token = uuidv4();
+  //       const blob = bucket.file(fileName);
+  //       const writeStream = blob.createWriteStream(filepath);
+  //       file.pipe(writeStream);
+  //       // File was processed by Busboy; wait for it to be written.
+  //       // Note: GCF may not persist saved files across invocations.
+  //       // Persistent files must be kept in other locations
+  //       // (such as Cloud Storage buckets).
+  //       const promise = new Promise((resolve, reject) => {
+  //         file.on("end", () => {
+  //           writeStream.end();
+  //         });
+  //         writeStream.on("finish", () => {
+  //           console.log("---Assemblying Public URL & Metadata---", blob.name);
+  //           const publicUrl = `https://firebasestorage.googleapis.com/v0/b/${
+  //             bucket.name
+  //           }/o/${encodeURI(blob.name)}?alt=media`;
+  //           resolve({ [key]: publicUrl });
+  //         });
+  //         writeStream.on("error", reject);
+  //       });
+  //     });
+  //     // Triggered once all uploaded files are processed by Busboy.
+  //     // We still need to wait for the disk writes (saves) to complete.
+  //     busboy.on("finish", async () => {
+  //       await Promise.all(fileWrites);
+  //       /**
+  //        * TODO(developer): Process saved files here
+  //        */
+  //       blob.unlinkSync(file);
+  //       res.send();
+  //     });
+  //     busboy.end(req.rawBody);
+  //   });
+  // } catch (err) {
+  //   console.log("form error: ", err);
+  // }
+});
 // router.post("/", auth, async (req, res) => {
 //   console.log("req.body", req.body);
 //   console.log("req.user", req.user);

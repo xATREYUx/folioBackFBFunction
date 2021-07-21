@@ -34,7 +34,7 @@ router.post("/", async (req, res) => {
         console.log("token log: ", token);
 
         return res
-          .cookie("token", token, {
+          .cookie("__session", token, {
             httpOnly: true,
             sameSite: "none",
             secure: true,
@@ -64,13 +64,13 @@ router.get("/logout", (req, res) => {
 router.get("/loggedIn", (req, res) => {
   console.log("login validation initiated");
   try {
-    const token = req.cookies.token;
+    const token = req.cookies.__session;
     if (!token) {
       console.log("no token cookie");
       return res.json(null);
     }
 
-    console.log("Token Creation Initiated");
+    console.log("Token Creation Initiated: ", token);
     const validatedUser = jwt.verify(token, process.env.JWT_SECRET);
     console.log("Token cookie: ", validatedUser);
 
