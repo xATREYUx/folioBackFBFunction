@@ -10,12 +10,15 @@ const gmailPassword = functions.config().gmail.password;
 
 router.post("/", captchaCheck, async (req, res) => {
   console.log("contact router fired");
+  // console.log("captchaCheck result", captchaCheck);
 
   if (req.method === "OPTIONS") {
+    console.log("res.end - method was 'OPTIONS'");
     res.end();
   } else {
     try {
       if (req.method !== "POST") {
+        console.log("return - method was a post request");
         return;
       }
       if (req.captcha !== true) {
@@ -26,7 +29,7 @@ router.post("/", captchaCheck, async (req, res) => {
         service: "gmail",
         auth: {
           user: gmailEmail,
-          pass: gmailPassword,
+          pass: "F7974639s!",
         },
       });
 

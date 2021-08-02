@@ -40,7 +40,7 @@ app.use(
     origin: ["http://localhost:3000", "https://foliofront.web.app"],
     credentials: true,
     cacheControl: "private",
-    allowedHeaders: ["set-cookie", "content-type", "cookie"],
+    allowedHeaders: ["set-cookie", "content-type", "cookie", "authorization"],
   })
 );
 

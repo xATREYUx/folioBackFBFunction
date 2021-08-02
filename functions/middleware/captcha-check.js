@@ -1,6 +1,7 @@
 const axios = require("axios");
 
 const captchaCheck = async (req, res, next) => {
+  console.log("captchaCheck Started");
   try {
     const token = req.headers.authorization.split(" ")[1];
 
@@ -10,7 +11,7 @@ const captchaCheck = async (req, res, next) => {
       )
       .then((captchaRes) => {
         console.log("captchaRes: ", captchaRes.data["success"]);
-        res.captcha = captchaRes["success"];
+        req.captcha = captchaRes.data["success"];
       })
       .catch((err) => {
         throw new Error(`Error in Google Siteverify API. ${err.message}`);
