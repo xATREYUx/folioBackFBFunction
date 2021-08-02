@@ -29,7 +29,7 @@ router.post("/", captchaCheck, async (req, res) => {
         service: "gmail",
         auth: {
           user: gmailEmail,
-          pass: "F7974639s!",
+          pass: gmailPassword,
         },
       });
 
