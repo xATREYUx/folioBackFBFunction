@@ -69,8 +69,7 @@ router.get("/loggedIn", (req, res) => {
       console.log("no token cookie");
       return res.json(null);
     }
-
-    console.log("Token Creation Initiated: ", token);
+    console.log("Verify Token Initiated: ", token);
     const validatedUser = jwt.verify(token, process.env.JWT_SECRET);
     console.log("Token cookie: ", validatedUser);
 

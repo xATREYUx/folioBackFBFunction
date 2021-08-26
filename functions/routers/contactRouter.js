@@ -9,7 +9,7 @@ const gmailEmail = functions.config().gmail.email;
 const gmailPassword = functions.config().gmail.password;
 
 router.post("/", captchaCheck, async (req, res) => {
-  console.log("contact router fired");
+  console.log("contact router fired", gmailPassword);
   // console.log("captchaCheck result", captchaCheck);
 
   if (req.method === "OPTIONS") {

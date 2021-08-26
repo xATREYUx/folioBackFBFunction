@@ -49,5 +49,6 @@ app.use(cookieParser());
 app.use("/auth", require("./routers/userRouter"));
 app.use("/posts", require("./routers/postRouter"));
 app.use("/contacts", require("./routers/contactRouter"));
+app.use("/admin", require("./routers/adminRouter"));
 
 exports.app = functions.https.onRequest(app);

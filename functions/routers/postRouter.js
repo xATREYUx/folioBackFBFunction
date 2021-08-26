@@ -81,7 +81,7 @@ router.post("/", auth, (req, res) => {
       imageUrls.push(
         `https://firebasestorage.googleapis.com/v0/b/${
           bucket.name
-        }/o/${encodeURI(newFileName)}?alt=media`
+        }/o/postImages%2F${encodeURI(imageToBeUploaded.newFileName)}?alt=media`
       );
       let token = uuidv4();
       promises.push(
@@ -90,6 +90,7 @@ router.post("/", auth, (req, res) => {
           .bucket()
           .upload(imageToBeUploaded.filepath, {
             resumable: false,
+            destination: `postImages/${imageToBeUploaded.newFileName}`,
             metadata: {
               metadata: {
                 contentType: imageToBeUploaded.mimetype,
@@ -280,4 +281,16 @@ router.get("/user", auth, async (req, res) => {
     console.log("err", err);
   }
 });
+
+router.delete("/:id", auth, async (req, res) => {
+  const { id } = req.params;
+  try {
+    const deleteRes = await Posts.doc(id).delete();
+
+    res.json(deleteRes);
+  } catch (err) {
+    console.log("err", err);
+  }
+});
+
 module.exports = router;
