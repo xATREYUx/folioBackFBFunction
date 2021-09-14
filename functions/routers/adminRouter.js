@@ -9,19 +9,19 @@ router.post("/", auth, (req, res) => {
     .getUserByEmail(req.user.email)
     .then((user) => {
       console.log("getUserByEmail: ", user);
-
       return admin.auth().setCustomUserClaims(user.uid, {
         admin: true,
       });
     })
     .then(() => {
-      console.log(req.user);
-      //   res.json(req.user);
+      console.log("adminRouter req.user", req.user);
+      res.json(req.user);
       return {
         message: `Success! ${req.user.email} has been made an admin`,
       };
     })
     .catch((err) => {
+      console.log("admin post err", err);
       return err;
     });
 });
