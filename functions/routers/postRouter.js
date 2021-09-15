@@ -201,8 +201,8 @@ router.delete("/:id", auth, async (req, res) => {
 
 //Update Post
 router.put("/:id", auth, async (req, res) => {
-  console.log("---editPost Initiated---");
-
+  console.log("---updatePost Initiated---");
+  const { uid } = req.user;
   const { id } = req.params;
   const docRef = Posts.doc(id);
   console.log("---docRef id---", id);
@@ -218,13 +218,13 @@ router.put("/:id", auth, async (req, res) => {
   let newFileName = "";
 
   busboy.on("field", (fieldname, fieldvalue) => {
-    console.log("---postsrouter busboy.on('field') initiated---");
+    console.log("---updatePost busboy.on('field') initiated---");
     console.log(fieldname);
     fields[fieldname] = fieldvalue;
   });
 
   busboy.on("file", (fieldname, file, filename, encoding, mimetype) => {
-    console.log("---postsrouter busboy.on('file') initiated---");
+    console.log("---updatePost busboy.on('file') initiated---");
 
     if (mimetype !== "image/jpeg" && mimetype !== "image/png") {
       return res.status(400).json({ error: "Wrong file type submitted!" });
@@ -248,64 +248,58 @@ router.put("/:id", auth, async (req, res) => {
     imagesToUpload.push(imageToAdd);
   });
 
-  busboy
-    .on("finish", async () => {
-      console.log("---Edit postsrouter busboy.on('finish') initiated---");
+  busboy.on("finish", async () => {
+    console.log("---Edit postsrouter busboy.on('finish') initiated---");
 
-      let promises = [];
+    let promises = [];
 
-      imagesToUpload.forEach((imageToBeUploaded) => {
-        imageUrls.push(
-          `https://firebasestorage.googleapis.com/v0/b/${
-            bucket.name
-          }/o/postImages%2F${encodeURI(
-            imageToBeUploaded.newFileName
-          )}?alt=media`
-        );
-        let token = uuidv4();
-        promises.push(
-          admin
-            .storage()
-            .bucket()
-            .upload(imageToBeUploaded.filepath, {
-              resumable: false,
-              destination: `postImages/${imageToBeUploaded.newFileName}`,
+    imagesToUpload.forEach((imageToBeUploaded) => {
+      imageUrls.push(
+        `https://firebasestorage.googleapis.com/v0/b/${
+          bucket.name
+        }/o/postImages%2F${encodeURI(imageToBeUploaded.newFileName)}?alt=media`
+      );
+      let token = uuidv4();
+      promises.push(
+        admin
+          .storage()
+          .bucket()
+          .upload(imageToBeUploaded.filepath, {
+            resumable: false,
+            destination: `postImages/${imageToBeUploaded.newFileName}`,
+            metadata: {
               metadata: {
-                metadata: {
-                  contentType: imageToBeUploaded.mimetype,
-                  firebaseStorageDownloadTokens: token,
-                },
+                contentType: imageToBeUploaded.mimetype,
+                firebaseStorageDownloadTokens: token,
               },
-            })
-        );
-      });
-
-      try {
-        console.log("---Post Edit Promises Initiated---");
-
-        await Promise.all(promises);
-        const { title, caption, content } = fields;
-        var editPostData = {
-          title,
-          caption,
-          content,
-          creator: uid,
-          updated: admin.firestore.Timestamp.now().seconds,
-          postURLs: imageUrls,
-        };
-        const editPostRes = await docRef.update(editPostData);
-        console.log("---editPostRes---", editPostRes.id);
-        editPostRes.id = editPostRes.id;
-
-        res.status(200).send(editPostData);
-      } catch (err) {
-        console.log("editPOst error", err);
-        res.status(500).json(err);
-      }
-    })
-    .catch((err) => {
-      console.log("Update error", err);
+            },
+          })
+      );
     });
+
+    try {
+      console.log("---Post Edit Promises Initiated---");
+
+      await Promise.all(promises);
+      const { title, caption, content } = fields;
+      var editPostData = {
+        title,
+        caption,
+        content,
+        creator: uid,
+        updated: admin.firestore.Timestamp.now().seconds,
+        postURLs: imageUrls,
+      };
+      const editPostRes = await docRef.update(editPostData);
+      console.log("---editPostRes---", editPostRes.id);
+      editPostRes.id = editPostRes.id;
+
+      res.status(200).send(editPostData);
+    } catch (err) {
+      console.log("updatePost error", err);
+      res.status(500).json(err);
+    }
+  });
 
   busboy.end(req.rawBody);
 });
