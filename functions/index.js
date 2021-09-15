@@ -7,7 +7,7 @@ var bodyParser = require("body-parser");
 const functions = require("firebase-functions");
 const admin = require("firebase-admin");
 
-dotenv.config();
+require("dotenv").config();
 
 admin.initializeApp({
   // credential: admin.credential.cert(serviceAccount),
@@ -18,7 +18,9 @@ admin.initializeApp({
 if (process.env.NODE_ENV == "development") {
   process.env["FIRESTORE_EMULATOR_HOST"] = "localhost:8080";
 }
+// console.log("INITIALIZING NODE_ENV: ", process.env.NODE_ENV);
 console.log("INITIALIZING NODE_ENV: ", process.env.NODE_ENV);
+
 const app = express();
 const PORT = process.env.PORT || 5000;
 // app.listen(PORT, () => {

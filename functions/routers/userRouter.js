@@ -24,6 +24,7 @@ router.post("/", async (req, res) => {
           posts: [],
         });
         console.log("---jwt signing initiated---");
+        console.log("---process.env.JWT_SECRET---", process.env.JWT_SECRET);
 
         const token = jwt.sign(
           {
